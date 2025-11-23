@@ -13,7 +13,7 @@ device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
 def load_model():
     model = MixedSchNet()
-    model.load_state_dict(torch.load(os.path.join(os.getcwd(), f"MixedSchnet.pth"), map_location=device))
+    model.load_state_dict(torch.load(os.path.join(f"{os.getcwd()}/variational-parameter-modeling", f"MixedSchnet.pth"), map_location=device))
     model.to(device)
     model.eval()
 

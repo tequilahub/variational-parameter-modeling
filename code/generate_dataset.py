@@ -14,7 +14,7 @@ from .load_dataset import load_dataset
 MAX_ATOMS = 6
 AMOUNT = 100
 
-OUTPUT_DIR = f"/data/h{MAX_ATOMS}"
+OUTPUT_DIR = f"{os.curdir}/variational-parameter-modeling/data/h{MAX_ATOMS}"
 CSV_FILE = os.path.join(OUTPUT_DIR, "CHANGE.csv")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 last_dict = None

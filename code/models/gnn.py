@@ -20,9 +20,6 @@ from tqdm import tqdm
 # parameter to control whether GNN is generating undirected graphs
 UNDIRECTED = False
 
-device = torch.device("mps")
-if device is None:
-    device = torch.device("cpu")
 torch.set_num_threads(8)
 
 model_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -30,7 +27,7 @@ model_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
 def build_knn_graph(node_features, edge_set, k=3):
     """Builds a k-NN graph based on node features."""
-    coords = node_features.numpy()  # Convert to numpy
+    coords = node_features.cpu().numpy()  # Convert to numpy
     dist_matrix = distance_matrix(coords, coords)
     knn_edges = []
     features = []
@@ -52,11 +49,11 @@ def build_knn_graph(node_features, edge_set, k=3):
 
 
 # Hybrid GNN model
-class EdgePredictionHybridGNN(torch.nn.Module):
+class GNN(torch.nn.Module):
     def __init__(
         self,
-        input_dim,
-        hidden_dim,
+        hidden_dim=64,
+        input_dim=3,
         use_edge_features=True,
         use_graph_attention=True,
         additional_depth=False,
@@ -67,13 +64,15 @@ class EdgePredictionHybridGNN(torch.nn.Module):
         gatconv_only=False,
         larger_mlp=False,
     ):
-        super(EdgePredictionHybridGNN, self).__init__()
+        super(GNN, self).__init__()
         self.use_edge_features = use_edge_features
         self.use_graph_attention = use_graph_attention
         self.additional_depth = additional_depth
         self.gatconv_only = gatconv_only
         self.gat_dropout = gat_dropout
         actual_hidden_dim = hidden_dim
+
+        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
         # Message passing layers
         if not self.use_graph_attention:
             self.conv1 = GCNConv(input_dim, hidden_dim)
@@ -137,12 +136,23 @@ class EdgePredictionHybridGNN(torch.nn.Module):
 
     def forward(
         self,
-        x,
-        global_edge_index,
-        edge_index,
-        edge_attr=None,
-        global_edge_features=None,
+        z,
+        batch=None,
+        pos=None,
+        edges=None,
     ):
+
+        data = prepare_prediction_datapoint(pos, edges[0])
+        data.to(self.device)
+
+        coordinates, edge_index, global_edge_index, global_edge_attr, global_edge_features, edge_attr = data
+        edge_index = extract(edge_index)
+        global_edge_index = extract(global_edge_index)
+        global_edge_attr = extract(global_edge_attr)
+        edge_attr = extract(edge_attr)
+        global_edge_features = extract(global_edge_features)
+
+        x = pos
         if self.use_graph_attention:
             if self.gatconv_only:
                 x = F.dropout(x, p=self.gat_dropout, training=self.training)
@@ -155,6 +165,10 @@ class EdgePredictionHybridGNN(torch.nn.Module):
             else:
                 # Message passing with GATConv to allow cross attention between multiple nodes
                 # this uses the global edge index for the closest nodes
+                global_edge_features = global_edge_features.t()
+
+                print(x, "\n", global_edge_index, "\n", global_edge_features)
+
                 x = self.gatconv(
                     x, edge_index=global_edge_index, edge_attr=global_edge_features
                 )
@@ -187,7 +201,12 @@ class EdgePredictionHybridGNN(torch.nn.Module):
         return edge_values
 
 
+def extract(t):
+    # if t is ("name", tensor)
+    return t[1] if isinstance(t, tuple) else t
+
 def prepare_prediction_datapoint(coordinates, edges, scalers=None):
+    edges = [(a.item(), b.item()) for a, b in edges]
     coordinates = torch.tensor(coordinates, dtype=torch.float)
     edge_set = np.array(edges)
     edge_index = torch.tensor(edge_set).t().contiguous()
@@ -216,9 +235,9 @@ def prepare_prediction_datapoint(coordinates, edges, scalers=None):
         edge_index=edge_index,
         global_edge_index=global_edge_index,
         global_edge_attr=torch.tensor(global_edge_features, dtype=torch.float),
+        global_edge_features = torch.tensor(global_edge_features),
         edge_attr=edge_features,
     )
-
 
     return data
 

@@ -20,7 +20,6 @@ from tqdm import tqdm
 
 # device = torch.device("mps")
 # if device is None:
-device = torch.device("cpu")
 torch.set_num_threads(4)
 
 model_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -53,27 +52,10 @@ class CutoffSchNet(SchNet):
             )
 
         h = self.lin1(h)
-        # h = torch.nn.functional.dropout(h, p=0.3)
-        # h = self.act(h)
-        # h = self.lin2(h)
-        #
-        # if self.dipole:
-        #     # Get center of mass.
-        #     mass = self.atomic_mass[z].view(-1, 1)
-        #     M = self.sum_aggr(mass, batch, dim=0)
-        #     c = self.sum_aggr(mass * pos, batch, dim=0) / M
-        #     h = h * (pos - c.index_select(0, batch))
-        #
-        # if not self.dipole and self.mean is not None and self.std is not None:
-        #     h = h * self.std + self.mean
-        #
-        # if not self.dipole and self.atomref is not None:
-        #     h = h + self.atomref(z)
-
         return h
 
 
-class CustomSchNet(torch.nn.Module):
+class LinearSchNet(torch.nn.Module):
     """
     Customized SchNet implementation for edge prediction tasks.
 
@@ -96,7 +78,7 @@ class CustomSchNet(torch.nn.Module):
         mlp_skip_connection=False,
         dropout=0.3,
     ):
-        super(CustomSchNet, self).__init__()
+        super(LinearSchNet, self).__init__()
 
         self.use_edge_features = use_edge_features
         self.use_gaussian_smearing = use_gaussian_smearing
@@ -142,15 +124,14 @@ class CustomSchNet(torch.nn.Module):
                 Sigmoid(),
                 Linear(edge_input_dim * mlp_increase, 1),
             )
+        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
     def forward(
         self,
-        x,
-        edge_index,
-        edge_attr=None,
+        z,
         batch=None,
         pos=None,
-        **kwargs,
+        edges=None,
     ):
         """
         Forward pass of the CustomSchNet model.
@@ -165,13 +146,14 @@ class CustomSchNet(torch.nn.Module):
         Returns:
             Edge predictions
         """
-        # If pos is None, use x as positions
-        if pos is None:
-            pos = x
+
+        x, coordinates, edge_index, edge_attr = prepare_prediction_datapoint(pos, edges[0])
+        edge_attr.to(self.device)
+        edge_index.to(self.device)
 
         # Get node embeddings from SchNet
         node_embeddings = self.schnet(
-            z=x,
+            z=z,
             pos=pos,
             batch=batch,
         )
@@ -191,6 +173,11 @@ class CustomSchNet(torch.nn.Module):
             if self.use_gaussian_smearing:
                 distance_feat = self.distance_expansion(distance_feat)
 
+            distance_feat = distance_feat.to(self.device, non_blocking=True)
+            angle_feat = angle_feat.to(self.device, non_blocking=True)
+            edge_features = edge_features.to(self.device, non_blocking=True)
+            distance_feat = distance_feat.unsqueeze(1)
+
             edge_features = torch.cat([edge_features, distance_feat, angle_feat], dim=1)
 
         # Predict edge values
@@ -198,61 +185,10 @@ class CustomSchNet(torch.nn.Module):
         return edge_values
 
 
-# Utility function to create a SchNet-based model
-def create_schnet_model(
-    hidden_dim=128,
-    num_filters=128,
-    num_interactions=6,
-    num_gaussians=50,
-    cutoff=10.0,
-    max_num_neighbors=32,
-    use_edge_features=True,
-    larger_mlp=False,
-    mlp_increase=4,
-    use_gaussian_smearing=False,
-    mlp_skip_connection=False,
-    device=None,
-):
-    """
-    Create and return a CustomSchNet model with the specified parameters.
-
-    Args:
-        input_dim: Dimension of input node features
-        hidden_dim: Dimension of hidden layers
-        num_filters: Number of filters in SchNet
-        num_interactions: Number of interaction blocks in SchNet
-        num_gaussians: Number of Gaussian functions for distance expansion
-        cutoff: Cutoff distance for interactions
-        max_num_neighbors: Maximum number of neighbors to consider
-        use_edge_features: Whether to use edge features in prediction
-        larger_mlp: Whether to use a larger MLP for edge prediction
-        device: Device to place the model on
-
-    Returns:
-        Initialized CustomSchNet model
-    """
-    model = CustomSchNet(
-        hidden_dim=hidden_dim,
-        num_filters=num_filters,
-        num_interactions=num_interactions,
-        num_gaussians=num_gaussians,
-        cutoff=cutoff,
-        max_num_neighbors=max_num_neighbors,
-        use_edge_features=use_edge_features,
-        larger_mlp=larger_mlp,
-        mlp_increase=mlp_increase,
-        use_gaussian_smearing=use_gaussian_smearing,
-        mlp_skip_connection=mlp_skip_connection,
-    )
-
-    if device is not None:
-        model = model.to(device)
-
-    return model
-
-
 def prepare_prediction_datapoint(coordinates, edges, scalers=None):
     coordinates = torch.tensor(coordinates, dtype=torch.float)
+    edges = [(a.item(), b.item()) for a, b in edges]
+
     edge_set = np.array(edges)
     edge_index = torch.tensor(edge_set).t().contiguous()
 
@@ -273,12 +209,5 @@ def prepare_prediction_datapoint(coordinates, edges, scalers=None):
 
     # create Data conventional to pytorch-geometric
     # For SchNet, we need to provide positions
-    data = Data(
-        x=x,
-        pos=coordinates,  # Add positions for SchNet
-        edge_index=edge_index,
-        edge_attr=edge_features,
-    )
-
-    return data
+    return x, coordinates, edge_index, edge_features
 

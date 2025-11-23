@@ -8,10 +8,13 @@ import torch.nn as nn
 import torch.optim as optim
 
 from .models.mixed_schnet import MixedSchNet
+from .models.linear_schnet import LinearSchNet
+from .models.gnn import GNN
+
 from .load_dataset import get_dataset, get_dataloader
 from .evaluation import evaluate_structure
 
-NUM_EPOCHS = 3
+NUM_EPOCHS = 10
 BATCH_SIZE = 1
 
 def train():
@@ -20,10 +23,11 @@ def train():
     scaler = torch.amp.GradScaler(device)
 
     # Combine Datasets to complex one
-    train_1 = get_dataset(fp=f"h4/a.csv")
-    train_2 = get_dataset(fp=f"h4/b.csv")
+    train_1 = get_dataset(fp=f"h4/linear_1k.csv")
+    train_2 = get_dataset(fp=f"h4/random_2k.csv")
+    train_3 = get_dataset(fp=f"h6/random_2k.csv")
 
-    train_loader = get_dataloader([train_1, train_2], batch_size=BATCH_SIZE)
+    train_loader = get_dataloader([train_1, train_2, train_3], batch_size=BATCH_SIZE)
 
     # Define what the model shall be evaluated on
     eval_structure = {
@@ -32,7 +36,11 @@ def train():
         "h6 random": get_dataloader([get_dataset(fp="h6/test_random_100.csv")], batch_size=BATCH_SIZE),
         #"h8 linear": get_dataloader([get_dataset(fp="h8/test_linear_100.csv")], batch_size=BATCH_SIZE),
     }
-    model = MixedSchNet().to(device)
+    model = GNN().to(device)
+
+    num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"Number of trainable parameters: {num_params:,} \n\n")
+
     optimizer = optim.Adam(model.parameters())
     model.train()
 
@@ -57,10 +65,9 @@ def train():
 
         e = evaluate_structure(model, eval_structure, device, epoch)
         if e < best_error:
-            torch.save(model.state_dict(), os.path.join(os.getcwd(), f"MixedSchnet.pth"))
+            torch.save(model.state_dict(), os.path.join(f"{os.getcwd()}/variational-parameter-modeling", f"{type(model).__name__}.pth"))
             best_error = e
-            print("Model saved")
-        print("--------------------")
+            print("Model saved\n")
     return best_error
 
 if __name__ == "__main__":

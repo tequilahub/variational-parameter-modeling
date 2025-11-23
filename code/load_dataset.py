@@ -59,7 +59,7 @@ class MolDataset(torch.utils.data.Dataset):
 
 
 def get_dataset(fp) -> MolDataset:
-    data_dir = "thesis-jonas/data/"
+    data_dir = "variational-parameter-modeling/data/"
     edges, geometries, targets, coeffs, fcis, energies = load_dataset(os.path.join(data_dir,fp))
     full_dataset = MolDataset(edges, np.array(geometries), np.array(targets), np.array(coeffs), np.array(fcis), np.array(energies))
     return full_dataset
