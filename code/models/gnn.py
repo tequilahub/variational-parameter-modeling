@@ -59,9 +59,9 @@ class GNN(torch.nn.Module):
         additional_depth=False,
         gat_layers=2,
         gat_heads=1,
-        gat_dropout=0.0,
-        gat_residual=False,
-        gatconv_only=False,
+        gat_dropout=0.3,
+        gat_residual=True,
+        gatconv_only=True,
         larger_mlp=False,
     ):
         super(GNN, self).__init__()
@@ -118,7 +118,7 @@ class GNN(torch.nn.Module):
             actual_hidden_dim = hidden_dim * gat_heads
         # Fully connected layers for edge prediction,
         # takes in both edges node features
-        edge_input_dim = actual_hidden_dim * 2 + (2 if use_edge_features else 0)
+        edge_input_dim = 140#actual_hidden_dim * 2 + (2 if use_edge_features else 0)
         if larger_mlp:
             self.edge_mlp = torch.nn.Sequential(
                 torch.nn.Linear(edge_input_dim, edge_input_dim * 4),
@@ -145,42 +145,22 @@ class GNN(torch.nn.Module):
         data = prepare_prediction_datapoint(pos, edges[0])
         data.to(self.device)
 
-        coordinates, edge_index, global_edge_index, global_edge_attr, global_edge_features, edge_attr = data
+        coordinates, edge_index, global_edge_index, global_edge_attr, edge_attr = data
         edge_index = extract(edge_index)
         global_edge_index = extract(global_edge_index)
         global_edge_attr = extract(global_edge_attr)
         edge_attr = extract(edge_attr)
-        global_edge_features = extract(global_edge_features)
 
         x = pos
         if self.use_graph_attention:
             if self.gatconv_only:
                 x = F.dropout(x, p=self.gat_dropout, training=self.training)
+                print(global_edge_index.long().T, global_edge_attr.shape)
                 for m in self.conv_stack:
                     x = m(
-                        x, edge_index=global_edge_index, edge_attr=global_edge_features
+                        x, edge_index=global_edge_index.long().T, edge_attr=global_edge_attr
                     )
                     x = F.elu(F.dropout(x, p=self.gat_dropout, training=self.training))
-
-            else:
-                # Message passing with GATConv to allow cross attention between multiple nodes
-                # this uses the global edge index for the closest nodes
-                global_edge_features = global_edge_features.t()
-
-                print(x, "\n", global_edge_index, "\n", global_edge_features)
-
-                x = self.gatconv(
-                    x, edge_index=global_edge_index, edge_attr=global_edge_features
-                )
-                x = F.relu(x)
-                if self.additional_depth:
-                    x = self.gat_mlp(x)
-                    x = self.gatconv2(
-                        x, edge_index=global_edge_index, edge_attr=global_edge_features
-                    )
-                    x = F.relu(x)
-                    x = self.gat_mlp_2(x)
-                    x = F.relu(x)
         else:
             x = self.conv1(x, global_edge_index)
             x = F.relu(x)
@@ -194,7 +174,7 @@ class GNN(torch.nn.Module):
 
         # Add edge-specific features if provided
         if self.use_edge_features and edge_attr is not None:
-            edge_features = torch.cat([edge_features, edge_attr], dim=1)
+            edge_features = torch.cat([edge_features, global_edge_attr], dim=1)
 
         # Predict edge values
         edge_values = self.edge_mlp(edge_features).squeeze(dim=1)
@@ -206,8 +186,8 @@ def extract(t):
     return t[1] if isinstance(t, tuple) else t
 
 def prepare_prediction_datapoint(coordinates, edges, scalers=None):
-    edges = [(a.item(), b.item()) for a, b in edges]
     coordinates = torch.tensor(coordinates, dtype=torch.float)
+    edges = [(a.item(), b.item()) for a, b in edges]
     edge_set = np.array(edges)
     edge_index = torch.tensor(edge_set).t().contiguous()
 
@@ -235,7 +215,6 @@ def prepare_prediction_datapoint(coordinates, edges, scalers=None):
         edge_index=edge_index,
         global_edge_index=global_edge_index,
         global_edge_attr=torch.tensor(global_edge_features, dtype=torch.float),
-        global_edge_features = torch.tensor(global_edge_features),
         edge_attr=edge_features,
     )
 

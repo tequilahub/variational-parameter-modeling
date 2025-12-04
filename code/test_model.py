@@ -13,7 +13,7 @@ device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
 def load_model():
     model = MixedSchNet()
-    model.load_state_dict(torch.load(os.path.join(f"{os.getcwd()}/variational-parameter-modeling", f"MixedSchnet.pth"), map_location=device))
+    model.load_state_dict(torch.load(os.path.join(f"{os.getcwd()}/variational-parameter-modeling", f"MixedSchNet.pth"), map_location=device))
     model.to(device)
     model.eval()
 
@@ -111,9 +111,9 @@ def evaluate_model(n, str):
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
-    #plt.show()
+    plt.show()
 
 if __name__ == "__main__":
-    n = 4
-    evaluate_model(n=n, str="WHATTOEVALUATE.csv")
+    n = 10
+    evaluate_model(n=n, str="test_linear_100.csv")
 
