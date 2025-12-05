@@ -6,9 +6,9 @@ from time import perf_counter
 import numpy as np
 import torch
 import torch.nn.functional as F
-from quanti_gin.shared import generate_min_global_distance_edges, read_data_file
+#from quanti_gin.shared import generate_min_global_distance_edges, read_data_file
 from torch.nn import Dropout, Linear, Sequential, Sigmoid
-from torch.utils.tensorboard.writer import SummaryWriter
+#from torch.utils.tensorboard.writer import SummaryWriter
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import SchNet

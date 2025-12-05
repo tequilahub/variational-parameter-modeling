@@ -9,8 +9,9 @@ from time import perf_counter
 import torch
 from torch.nn import ModuleList
 import torch.nn.functional as F
-from torch.utils.tensorboard import SummaryWriter
-from quanti_gin.shared import generate_min_global_distance_edges, np, read_data_file
+#from torch.utils.tensorboard import SummaryWriter
+#from quanti_gin.shared import generate_min_global_distance_edges, np, read_data_file
+import numpy as np
 from scipy.spatial import distance_matrix
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
@@ -218,12 +219,4 @@ def prepare_prediction_datapoint(coordinates, edges, scalers=None):
         edge_attr=edge_features,
     )
 
-    return data
-
-
-def process_datapoint(args):
-    coordinates, edge_target = args
-    edges = generate_min_global_distance_edges(coordinates)
-    data = prepare_prediction_datapoint(coordinates, edges)
-    data.y = torch.tensor(edge_target, dtype=torch.float)
     return data

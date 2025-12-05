@@ -27,14 +27,14 @@ def train():
     train_2 = get_dataset(fp=f"h4/random_2k.csv")
     train_3 = get_dataset(fp=f"h6/random_2k.csv")
 
-    train_loader = get_dataloader([train_3], batch_size=BATCH_SIZE)
+    train_loader = get_dataloader([ train_3], batch_size=BATCH_SIZE)
 
     # Define what the model shall be evaluated on
     eval_structure = {
-        #"h4 random": get_dataloader([get_dataset(fp="h4/test_random_100.csv")], batch_size=BATCH_SIZE),
+        "h4 random": get_dataloader([get_dataset(fp="h4/test_random_100.csv")], batch_size=BATCH_SIZE),
         #"h6 linear": get_dataloader([get_dataset(fp="h6/test_linear_100.csv")], batch_size=BATCH_SIZE),
-        #"h6 random": get_dataloader([get_dataset(fp="h6/test_random_100.csv")], batch_size=BATCH_SIZE),
-        "h8 linear": get_dataloader([get_dataset(fp="h8/test_linear_100.csv")], batch_size=BATCH_SIZE),
+        "h6 random": get_dataloader([get_dataset(fp="h6/test_random_100.csv")], batch_size=BATCH_SIZE),
+        #"h8 linear": get_dataloader([get_dataset(fp="h8/test_linear_100.csv")], batch_size=BATCH_SIZE),
     }
     model = MixedSchNet().to(device)
 
