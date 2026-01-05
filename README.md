@@ -1,12 +1,20 @@
 ## Installation
 Follow the steps below to set up your environment.  
-For Qulacs to work with multiple cores do these extra steps. Otherwise just do the pip install's.
+For Qulacs to work with multiple cores follow the extra steps extra steps, otherwise just do the pip install's.  
+Recommended Python version is `3.12`.
 
-sudo apt install python3.12-venv
-
+```bash
 python3.12 -m venv myvenv  
 source myvenv/bin/activate
+```
 
+Default qulacs simulator
+```bash
+pip install qulacs
+```
+
+Fast qulacs simulators (linux) use similar commands with homebrew for macos
+```bash
 sudo apt install gcc-14 g++-14  
 sudo apt install libboost-all-dev
 
@@ -14,11 +22,15 @@ export C_COMPILER=gcc-14
 export CXX_COMPILER=g++-14  
 export QULACS_OPT_FLAGS="-mtune=native"  
 pip install git+https://github.com/qulacs/qulacs.git  
+```
 
+other dependencies
+```bash
 pip install tequila-basic  
 pip install pyscf  
 pip install torch-cluster  
 pip install torch_geometric  
+```
 
 ## Project structure
 variational-parameter-modeling/  
