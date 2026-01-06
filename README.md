@@ -42,22 +42,24 @@ variational-parameter-modeling/
 │   └── *.csv # (in subfolders, includes datasets used in thesis)  
 └──*.pth   # Model files saved/loaded outside main folder  
 
+From the main folder you can run the following functionalities as python modules.
 
 
 ## Training 
 You can define the details in the file `train.py` (model, dataset, evaluation). Then run the training as a module.
+During Training the best model will get saved to the main folder, for later usage.
 ```
-python -m train
+python -m code.train
 ```
 
 ## Testing Model Performance
 Here you can plot the dataset and model performance of your trained models. Select the dataset and the model that you want to evaluate in the file `test_model.py`.
 ```
-python -m test_model
+python -m code.test_model
 ```
 
 ## Generating Datasets
-Define MAX_ATOMS, AMOUNT of molecules you want to use. Changing the method `do_minimize` produces different outcomes (dataset quality, learnability of model). The Dataset is the main driver for model performance.
+Define MAX_ATOMS, AMOUNT and the geometry (structure) of molecules you want to use, which will produces different outcomes (dataset quality, learnability of model). The Dataset is the main driver for model performance.
 ```
-python -m generate_dataset
+python -m code.generate_dataset
 ```
