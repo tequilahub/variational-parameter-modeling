@@ -45,14 +45,19 @@ variational-parameter-modeling/
 
 
 ## Training 
+You can define the details in the file `train.py` (model, dataset, evaluation). Then run the training as a module.
+```
 python -m train
+```
 
 ## Testing Model Performance
-Here u can plot the dataset and model performance of ur trained models. Select the dataset and model u want to evaluate
+Here you can plot the dataset and model performance of your trained models. Select the dataset and the model that you want to evaluate in the file `test_model.py`.
+```
 python -m test_model
+```
 
 ## Generating Datasets
-Define MAX_ATOMS, AMOUNT of molecules u want to use.
-Changing the do_minimize can produce a lot of different outcomes (dataset quality, learnability of model).
-The Dataset is the main driver for model performance.
+Define MAX_ATOMS, AMOUNT of molecules you want to use. Changing the method `do_minimize` produces different outcomes (dataset quality, learnability of model). The Dataset is the main driver for model performance.
+```
 python -m generate_dataset
+```
