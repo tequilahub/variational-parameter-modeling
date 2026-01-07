@@ -28,7 +28,8 @@ other dependencies
 ```bash
 pip install tequila-basic  
 pip install pyscf  
-pip install torch-cluster  
+pip install torch==2.7.0
+pip install torch-cluster --no-build-isolation
 pip install torch_geometric  
 ```
 

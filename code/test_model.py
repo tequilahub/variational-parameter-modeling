@@ -74,7 +74,6 @@ def evaluate(model, eval_loader, device, n):
 
     print("better_count:", better_count)
     print("mean error: ", np.array(errors).mean())
-    print(errors)
     return np.array(geometry_index), np.array(vals), np.array(energies), np.array(fcis)
 
 def evaluate_model(n, str):
@@ -102,7 +101,7 @@ def evaluate_model(n, str):
     for x, y_pred, y_actual in zip(goemetry_index, pred, target):
         x = float(x)
         y_pred = float(y_pred)
-        y_actual = float(y_actual)
+        y_actual = float(y_actual.item())
         plt.plot([x, x], [y_pred, y_actual], color='gray', linestyle='--', linewidth=0.8)
 
     plt.xlabel(f'Atomic Distance of linear H$_{n}$')
